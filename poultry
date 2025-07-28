@@ -1,0 +1,191 @@
+<!DOCTYPE html><html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Poultry Farm Mobile App</title>
+  <link rel="manifest" href="manifest.json" />
+  <style>
+    * { box-sizing: border-box; font-family: Arial, sans-serif; }
+    body { margin: 0; background: #f5f5f5; color: #333; }
+    .container { padding: 20px; }
+    .hidden { display: none; }
+    h2 { color: #3f51b5; }
+    input, select, button {
+      width: 100%;
+      padding: 12px;
+      margin: 8px 0;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+    button {
+      background-color: #3f51b5;
+      color: white;
+      font-weight: bold;
+    }
+    .nav {
+      display: flex;
+      justify-content: space-around;
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+      background: #3f51b5;
+    }
+    .nav button {
+      flex: 1;
+      padding: 14px;
+      border: none;
+      background: transparent;
+      color: white;
+      font-size: 16px;
+    }
+    table {
+      width: 100%;
+      margin-top: 10px;
+      border-collapse: collapse;
+    }
+    table th, table td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: center;
+      font-size: 14px;
+    }
+    table thead {
+      background: #3f51b5;
+      color: white;
+    }
+    .error { color: red; }
+    canvas { max-width: 100%; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <div id="loginPage" class="container">
+    <h2>Admin Login</h2>
+    <input type="text" id="username" placeholder="Username" required />
+    <input type="password" id="password" placeholder="Password" required />
+    <button onclick="login()">Login</button>
+    <p class="error" id="loginError"></p>
+  </div>  <div id="dashboardPage" class="container hidden">
+    <h2>Welcome, Admin</h2>
+    <canvas id="feedChart"></canvas>
+    <canvas id="hatchChart"></canvas>
+  </div>  <div id="feedingPage" class="container hidden">
+    <h2>Feeding Log</h2>
+    <input type="date" id="feedDate" />
+    <select id="feedType">
+      <option value="Layers">Layers</option>
+      <option value="Broilers">Broilers</option>
+      <option value="Kienyeji">Kienyeji</option>
+    </select>
+    <input type="text" id="feedKind" placeholder="Feed Type (e.g. Mash)" />
+    <input type="number" id="feedQty" placeholder="Quantity (Kg)" />
+    <button onclick="addFeed()">Add Feeding Log</button>
+    <table>
+      <thead><tr><th>Date</th><th>Type</th><th>Feed</th><th>Qty</th></tr></thead>
+      <tbody id="feedTable"></tbody>
+    </table>
+  </div>  <div id="hatcheryPage" class="container hidden">
+    <h2>Hatchery Log</h2>
+    <input type="text" id="batchId" placeholder="Batch ID" />
+    <input type="number" id="eggsSet" placeholder="Eggs Set" />
+    <input type="date" id="hatchDate" />
+    <select id="hatchStatus">
+      <option value="Incubating">Incubating</option>
+      <option value="Hatched">Hatched</option>
+    </select>
+    <input type="text" id="successRate" placeholder="Success Rate (e.g. 90%)" />
+    <button onclick="addHatch()">Add Hatchery Log</button>
+    <table>
+      <thead><tr><th>Batch</th><th>Eggs</th><th>Hatch Date</th><th>Status</th><th>Rate</th></tr></thead>
+      <tbody id="hatchTable"></tbody>
+    </table>
+  </div>  <div class="nav hidden" id="bottomNav">
+    <button onclick="showPage('dashboardPage')">Home</button>
+    <button onclick="showPage('feedingPage')">Feed</button>
+    <button onclick="showPage('hatcheryPage')">Hatch</button>
+    <button onclick="logout()">Logout</button>
+  </div>  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>  <script>
+    const feedData = JSON.parse(localStorage.getItem("feedData") || "[]");
+    const hatchData = JSON.parse(localStorage.getItem("hatchData") || "[]");
+
+    function login() {
+      const user = username.value, pass = password.value;
+      if (user === "admin" && pass === "farm123") {
+        showPage("dashboardPage");
+        bottomNav.classList.remove("hidden");
+        renderFeed();
+        renderHatch();
+        renderCharts();
+      } else loginError.textContent = "Wrong credentials.";
+    }
+
+    function logout() {
+      showPage("loginPage");
+      bottomNav.classList.add("hidden");
+    }
+
+    function showPage(id) {
+      ["loginPage","dashboardPage","feedingPage","hatcheryPage"].forEach(p => document.getElementById(p).classList.add("hidden"));
+      document.getElementById(id).classList.remove("hidden");
+    }
+
+    function addFeed() {
+      const row = {
+        date: feedDate.value,
+        type: feedType.value,
+        kind: feedKind.value,
+        qty: feedQty.value
+      };
+      feedData.push(row);
+      localStorage.setItem("feedData", JSON.stringify(feedData));
+      renderFeed();
+    }
+
+    function renderFeed() {
+      feedTable.innerHTML = feedData.map(r => `<tr><td>${r.date}</td><td>${r.type}</td><td>${r.kind}</td><td>${r.qty}</td></tr>`).join("");
+    }
+
+    function addHatch() {
+      const row = {
+        batch: batchId.value,
+        eggs: eggsSet.value,
+        date: hatchDate.value,
+        status: hatchStatus.value,
+        rate: successRate.value
+      };
+      hatchData.push(row);
+      localStorage.setItem("hatchData", JSON.stringify(hatchData));
+      renderHatch();
+    }
+
+    function renderHatch() {
+      hatchTable.innerHTML = hatchData.map(r => `<tr><td>${r.batch}</td><td>${r.eggs}</td><td>${r.date}</td><td>${r.status}</td><td>${r.rate}</td></tr>`).join("");
+    }
+
+    function renderCharts() {
+      new Chart(document.getElementById("feedChart"), {
+        type: "bar",
+        data: {
+          labels: feedData.map(f => f.date),
+          datasets: [{
+            label: "Feed Quantity (Kg)",
+            data: feedData.map(f => f.qty),
+            backgroundColor: "#3f51b5"
+          }]
+        }
+      });
+
+      new Chart(document.getElementById("hatchChart"), {
+        type: "line",
+        data: {
+          labels: hatchData.map(h => h.date),
+          datasets: [{
+            label: "Eggs Set",
+            data: hatchData.map(h => h.eggs),
+            backgroundColor: "rgba(63,81,181,0.3)",
+            borderColor: "#3f51b5"
+          }]
+        }
+      });
+    }
+  </script></body>
+</html>
